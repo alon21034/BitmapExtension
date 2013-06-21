@@ -1,9 +1,31 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android" >
 
-    <item
-        android:id="@+id/action_settings"
-        android:orderInCategory="100"
-        android:showAsAction="never"
-        android:title="@string/action_settings"/>
-
+	<item 
+	    android:id="@+id/main_menu_origin"
+	    android:showAsAction="never"
+	    android:title="Original Image"/>
+	
+	<item 
+	    android:id="@+id/main_menu_gray"
+	    android:showAsAction="never"
+	    android:title="Gray Scale"/>
+	
+	<item 
+	    android:id="@+id/main_menu_smooth"
+	    android:showAsAction="never"
+	    android:title="Smooth Image"
+	    />
+	
+	<item 
+	    android:id="@+id/main_menu_balck_white"
+	    android:showAsAction="never"
+	    android:title="Quantization(2)"
+	    />
+	
+	<item 
+	    android:id="@+id/main_menu_cannyedge"
+	    android:showAsAction="never"
+	    android:title="Edge Detection"
+	    />
+    
 </menu>
