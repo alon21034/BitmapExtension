@@ -28,4 +28,16 @@
 	    android:title="Edge Detection"
 	    />
     
+	<item 
+	    android:id="@+id/main_menu_slash"
+	    android:showAsAction="never"
+	    android:title="Slash"
+	    />
+	
+	<item 
+	    android:id="@+id/main_menu_histogram_quan"
+	    android:showAsAction="never"
+	    android:title="Quantization by histogram"
+	    />	
+	
 </menu>

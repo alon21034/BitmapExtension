@@ -2,10 +2,13 @@ package tw.edu.ntu.bitmapextenstion;
 
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
+import android.graphics.Color;
 import android.util.Log;
 
 public class ExtensionBitmap {
 
+	public static final int GRAY_TO_SLASH = 0;
+	
 	private int width;
 	private int height;
 	private Bitmap origBitmap;
@@ -23,49 +26,123 @@ public class ExtensionBitmap {
 		short[][] arr = getGrayScaleArray();
 		
 		Bitmap bm = Bitmap.createBitmap(width, height, Config.ARGB_8888);
-		for(int i = 0 ; i < height ; i++) {
-			for (int j = 0 ; j < width ; j++) {
-				bm.setPixel(j, i, 0xff000000 | arr[i][j] | (arr[i][j] << 8) | (arr[i][j] << 16));
-			}
-		}
+		setBitmapGrayScaleColor(bm, arr);
 		return bm;
 	}
 	
-	public Bitmap getQuantizedBitmap(int num) {
-		Bitmap bm = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+	public short[][] getQuantizedArray(int num, boolean isHis) {
+		if (num < 2)
+			return null;
+
+		short[][] gray = getGrayScaleArray();
+
 		int[] arr = new int[num];
-		float step = 255 / num;
+		int[] thre = new int[num-1];
+		getThresholdArr(gray, num, thre, arr, isHis);
+		
+		for (int i = 0 ; i < height ; ++i) {
+			for (int j = 0 ; j < width ; ++j) {
+				boolean b = false;
+				for (int k = 0 ; k < num-1 ; ++k) {
+					if(gray[i][j] < thre[k]) {
+						gray[i][j] = (short) arr[k];
+						b = true;
+						break;
+					}
+				}
+				if (!b) gray[i][j] = 255;
+			}
+		}
+		
+		return gray;
+	}
+	
+	private void getThresholdArr(short[][] gray, int num, int[] thre, int[] arr, boolean isModified) {
+		float step = 255 / (num-1);
 		for (int i = 0 ; i < num ; ++i)
 			arr[i] = (int)(step * i);
 		arr[num-1] = 255;
 		
-		int[] thre = new int[num-1];
-		for (int i = 0 ; i < num-1 ; ++i) {
-			thre[i] = (arr[i] + arr[i+1]) / 2;
-			Log.d("!!", "!! thre = " + thre[i]);
+		if (isModified) {
+			int[] count = new int[256];
+			for (int i = 0 ; i < height ; ++i) {
+				for (int j = 0 ; j < width ; ++j) {
+					count[gray[i][j]]++;
+				}
+			}
+			
+			for (int i = 1 ; i < 256 ; ++i)
+				count[i] += count[i-1];
+			
+			int s = width * height / num;
+			int index = 0;
+			for (int i = 0 ; i < 256 ; ++i) {
+				if(count[i] > s) {
+					s+=s;
+					thre[index++] = i;
+				}
+			}
+		} else {
+			
+			for (int i = 0 ; i < num-1 ; ++i) {
+				thre[i] = (arr[i] + arr[i+1]) / 2;
+				Log.d("!!", "!! thre = " + thre[i]);
+			}
 		}
-		short[][] gray = getGrayScaleArray();
+		
+    }
+
+	public Bitmap getQuantizedBitmap(int num, boolean isHistogram) {
+		Bitmap bm = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+
+		short[][] gray = getQuantizedArray(num, isHistogram);
+		
+		setBitmapGrayScaleColor(bm, gray);
+		
+		return bm;
+	}
+	
+	public Bitmap getSpecialEffectBitmap(int id) {
+		switch (id) {
+		case GRAY_TO_SLASH:
+			return getSlashBitmap();
+		default:
+			return null;
+		}
+	}
+	
+	private Bitmap getSlashBitmap() {
+		Bitmap bm = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+		
+		short[][] gray = getQuantizedArray(3, true);
 		for (int i = 0 ; i < height ; ++i) {
 			for (int j = 0 ; j < width ; ++j) {
-				for (int k = 0 ; k < num-1 ; ++k) {
-					if(gray[i][j] < thre[k]) {
-						gray[i][j] = (short) arr[k];
-						break;
-					} else {
-						gray[i][j] = 255;
-					}
+				if (gray[i][j] != 0 && gray[i][j] != 255) {
+					gray[i][j] = (short) (((i+j)%15 == 0 || (i+j)%15 == 1)? 0 : 255);
 				}
 			}
 		}
 		
-		for(int i = 0 ; i < height ; i++) {
+		setBitmapGrayScaleColor(bm, gray);
+		
+		return bm;
+	}
+
+	private void setBitmapGrayScaleColor(Bitmap bm, short[][] gray) {
+	    for(int i = 0 ; i < height ; i++) {
 			for (int j = 0 ; j < width ; j++) {
 				bm.setPixel(j, i, 0xff000000 | gray[i][j] | (gray[i][j] << 8) | (gray[i][j] << 16));
 			}
 		}
-		
-		return bm;
-	}
+    }
+	
+	private void setBitmapGrayScaleColor(Bitmap bm, boolean[][] isEdge) {
+	    for(int i = 0 ; i < height ; i++) {
+			for (int j = 0 ; j < width ; j++) {
+				bm.setPixel(j, i, isEdge[i][j]?Color.WHITE : Color.BLACK);
+			}
+		}
+    }
 	
 	public short[][] getGrayScaleArray() {
 		short[][] src = new short[height][width];
@@ -112,7 +189,14 @@ public class ExtensionBitmap {
 		return src;
 	}
 	
-	public boolean[][] getEdgeImage() {
+	public Bitmap getEdgeBitmap() {
+		boolean [][] edge = getEdgeArray();
+		Bitmap bm = Bitmap.createBitmap(width, height, Config.ARGB_8888);
+		setBitmapGrayScaleColor(bm, edge);
+		return bm;
+	}
+	
+	public boolean[][] getEdgeArray() {
 		boolean[][] src = new boolean[height][width];
 		for(int i = 0 ; i < height ; ++i) {
 			for (int j = 0 ; j < width ; ++j) {
